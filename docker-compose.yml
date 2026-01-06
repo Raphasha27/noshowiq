@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # 1. Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+
+  # 2. Backend (.NET 8 API)
+  backend:
+    build:
+      context: ./
+      dockerfile: Backend.Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ML_ENGINE_URL=http://ml_engine:8001
+    depends_on:
+      - ml_engine
+
+  # 3. ML Engine (Python)
+  ml_engine:
+    build:
+      context: ./ml_engine
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"

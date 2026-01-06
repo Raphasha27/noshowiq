@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+*.user
+*.pdb
+*.suo
+.vs/
+
+# Node
+node_modules/
+.next/
+npm-debug.log
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# General
+.DS_Store
