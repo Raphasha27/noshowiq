@@ -48,4 +48,4 @@ python main.py
 "I built NoShowIQ, a real-time system that predicts healthcare appointment no-shows, optimizes overbooking, and triggers automated reminders to reduce revenue loss and patient waiting times."
 
 ---
-*Built by Rapha*
+*Built by Raphasha27*
