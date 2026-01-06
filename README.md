@@ -3,6 +3,8 @@
 
 **Real-Time Healthcare Appointment Optimization Platform**
 
+![NoShowIQ Dashboard](assets/noshowiq_dashboard.png)
+
 NoShowIQ is a real-time intelligent system designed to predict healthcare appointment no-shows, optimize schedule density (smart overbooking), and trigger automated interventions to recover revenue and reduce patient wait times.
 
 ## 🚀 Key Features // The "IQ"

@@ -4,6 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 // HTTP Client for ML Engine
 builder.Services.AddHttpClient("MLEngine", client =>
@@ -34,5 +35,6 @@ app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NoShowIQ.API.Hubs.NotificationHub>("/hub/notifications");
 
 app.Run();

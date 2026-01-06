@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using NoShowIQ.API.Hubs;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -9,10 +11,12 @@ namespace NoShowIQ.API.Controllers;
 public class PredictionController : ControllerBase
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
-    public PredictionController(IHttpClientFactory httpClientFactory)
+    public PredictionController(IHttpClientFactory httpClientFactory, IHubContext<NotificationHub> hubContext)
     {
         _httpClientFactory = httpClientFactory;
+        _hubContext = hubContext;
     }
 
     [HttpPost("predict")]
@@ -37,6 +41,17 @@ public class PredictionController : ControllerBase
         }
 
         var result = await response.Content.ReadFromJsonAsync<MLPredictionResult>();
+        
+        // REAL-TIME ALERT: If risk is high, notify dashboard immediately
+        if (result.RiskScore > 0.6)
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveRiskAlert", 
+                new { 
+                    Message = $"High Risk Detected for Patient ID {request.PatientId}", 
+                    RiskScore = result.RiskScore 
+                });
+        }
+        
         return Ok(result);
     }
 
@@ -61,6 +76,7 @@ public class PredictionController : ControllerBase
 
 public class AppointmentRequest
 {
+    public int PatientId { get; set; }
     public int Age { get; set; }
     public double DistanceMiles { get; set; }
     public int PrevNoShows { get; set; }
