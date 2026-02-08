@@ -6,3 +6,6 @@ python-multipart
 websockets
 jinja2
 python-dotenv
+sqlalchemy
+psycopg2-binary
+alembic

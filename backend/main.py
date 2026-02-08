@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import bookings
+from database import engine, Base
+import models.patient # Ensure models are loaded for metadata
+
+# Initialize Database
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="NoShowIQ API",
