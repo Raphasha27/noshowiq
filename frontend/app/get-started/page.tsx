@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { PROVINCES, LANGUAGES } from "@/lib/constants"
+import { createBooking } from "@/lib/api"
 
 // Professional SVG Icons
 const CheckIcon = () => (
@@ -28,6 +29,7 @@ export default function GetStartedPage() {
     const router = useRouter()
     const [step, setStep] = useState(1)
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     // Form data
     const [formData, setFormData] = useState({
@@ -48,8 +50,28 @@ export default function GetStartedPage() {
 
     const handleSubmit = async () => {
         setLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        router.push("/patient")
+        setError(null)
+        try {
+            await createBooking({
+                name: `${formData.firstName} ${formData.lastName}`,
+                id_number: formData.idNumber,
+                province: formData.province,
+                symptoms: "General Consultation", // Default for now
+                needs_assistance: false,
+                language_preference: formData.language
+            })
+
+            // Mock successful account creation locally
+            localStorage.setItem("isLoggedIn", "true")
+            localStorage.setItem("userRole", "patient")
+
+            router.push("/patient")
+        } catch (err) {
+            console.error("Submission error:", err)
+            setError("Failed to create booking. Please check your connection.")
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -85,7 +107,7 @@ export default function GetStartedPage() {
                     </p>
 
                     <div className="space-y-6">
-                        {features.map((feature, index) => (
+                        {features.map((feature: any, index: number) => (
                             <div
                                 key={feature.title}
                                 className="flex items-start gap-4 animate-fade-in"
@@ -185,7 +207,7 @@ export default function GetStartedPage() {
                                                 onChange={(e) => handleChange("province", e.target.value)}
                                                 className="bg-background text-foreground"
                                             >
-                                                {PROVINCES.map(p => (
+                                                {PROVINCES.map((p: any) => (
                                                     <option key={p.value} value={p.value}>{p.label}</option>
                                                 ))}
                                             </Select>
@@ -197,7 +219,7 @@ export default function GetStartedPage() {
                                                 onChange={(e) => handleChange("language", e.target.value)}
                                                 className="bg-background text-foreground"
                                             >
-                                                {LANGUAGES.map(l => (
+                                                {LANGUAGES.map((l: any) => (
                                                     <option key={l.value} value={l.value}>{l.label}</option>
                                                 ))}
                                             </Select>

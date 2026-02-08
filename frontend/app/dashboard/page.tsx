@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { mockPatients, mockDoctors, mockNotifications, type Patient } from "@/lib/mock-data"
+import { fetchBookings, updateBookingStatus, type Patient } from "@/lib/api"
+import { mockDoctors, mockNotifications } from "@/lib/mock-data"
 
 // Professional SVG Icons
 const UsersIcon = () => (
@@ -43,14 +44,16 @@ const ExclamationIcon = () => (
     </svg>
 )
 
-const getStatusStyle = (status: Patient["status"]) => {
-    switch (status) {
+const getStatusStyle = (status: string) => {
+    switch (status.toLowerCase()) {
         case "waiting":
             return "status-waiting"
+        case "in consultation":
         case "in-consultation":
             return "status-in-progress"
         case "completed":
             return "status-completed"
+        case "no show":
         case "no-show":
             return "status-no-show"
         default:
@@ -58,16 +61,19 @@ const getStatusStyle = (status: Patient["status"]) => {
     }
 }
 
-const getStatusLabel = (status: Patient["status"]) => {
-    switch (status) {
+const getStatusLabel = (status: string) => {
+    switch (status.toLowerCase()) {
         case "waiting": return "Waiting"
+        case "in consultation":
         case "in-consultation": return "In Consultation"
         case "completed": return "Completed"
+        case "no show":
         case "no-show": return "No Show"
+        default: return status
     }
 }
 
-const getPriorityStyle = (priority: Patient["priority"]) => {
+const getPriorityStyle = (priority: string = "normal") => {
     switch (priority) {
         case "emergency":
             return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
@@ -79,18 +85,40 @@ const getPriorityStyle = (priority: Patient["priority"]) => {
 }
 
 export default function DashboardPage() {
-    const [patients, setPatients] = useState<Patient[]>(mockPatients)
+    const [patients, setPatients] = useState<Patient[]>([])
     const [currentTime, setCurrentTime] = useState(new Date())
+    const [loading, setLoading] = useState(true)
+
+    const loadData = useCallback(async () => {
+        try {
+            const data = await fetchBookings()
+            setPatients(data)
+        } catch (error) {
+            console.error("Error loading patients:", error)
+        } finally {
+            setLoading(false)
+        }
+    }, [])
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+        loadData()
         return () => clearInterval(timer)
-    }, [])
+    }, [loadData])
 
-    const waitingPatients = patients.filter(p => p.status === "waiting")
-    const inConsultation = patients.filter(p => p.status === "in-consultation")
-    const completedToday = patients.filter(p => p.status === "completed")
-    const noShows = patients.filter(p => p.status === "no-show")
+    const handleStatusUpdate = async (id: number, status: string) => {
+        try {
+            await updateBookingStatus(id, status)
+            loadData()
+        } catch (error) {
+            console.error("Error updating status:", error)
+        }
+    }
+
+    const waitingPatients = patients.filter(p => p.status.toLowerCase() === "waiting")
+    const inConsultation = patients.filter(p => p.status.toLowerCase() === "in consultation" || p.status.toLowerCase() === "in-consultation")
+    const completedToday = patients.filter(p => p.status.toLowerCase() === "completed")
+    const noShows = patients.filter(p => p.status.toLowerCase() === "no show" || p.status.toLowerCase() === "no-show")
     const activeDoctors = mockDoctors.filter(d => d.status !== "offline")
     const unreadNotifications = mockNotifications.filter(n => !n.read)
 
@@ -123,10 +151,12 @@ export default function DashboardPage() {
                                 SN
                             </div>
                         </Link>
-                        <Button>
-                            <UserPlusIcon />
-                            <span className="ml-2 hidden sm:inline">Add Patient</span>
-                        </Button>
+                        <Link href="/get-started">
+                            <Button>
+                                <UserPlusIcon />
+                                <span className="ml-2 hidden sm:inline">Add Patient</span>
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 
@@ -183,7 +213,7 @@ export default function DashboardPage() {
                                 <div>
                                     <p className="text-sm text-muted-foreground mb-1">No-Shows</p>
                                     <p className="text-3xl font-bold">{noShows.length}</p>
-                                    <p className="text-xs text-red-500 mt-1">{((noShows.length / patients.length) * 100).toFixed(1)}% rate</p>
+                                    <p className="text-xs text-red-500 mt-1">{patients.length > 0 ? ((noShows.length / patients.length) * 100).toFixed(1) : 0}% rate</p>
                                 </div>
                                 <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
                                     <ExclamationIcon />
@@ -194,182 +224,149 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Main Content */}
-                <div className="grid lg:grid-cols-3 gap-6">
-                    {/* Patient Queue */}
-                    <div className="lg:col-span-2">
-                        <Card className="glass-card animate-slide-up">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle>Patient Queue</CardTitle>
-                                        <CardDescription>{waitingPatients.length + inConsultation.length} patients active</CardDescription>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button className="px-3 py-1 text-sm rounded-lg bg-primary/10 text-primary">All</button>
-                                        <button className="px-3 py-1 text-sm rounded-lg hover:bg-accent">Waiting</button>
-                                        <button className="px-3 py-1 text-sm rounded-lg hover:bg-accent">Urgent</button>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {/* In Consultation */}
-                                    {inConsultation.map((patient) => (
-                                        <div
-                                            key={patient.id}
-                                            className="p-4 rounded-xl border-2 border-primary bg-primary/5 animate-pulse-glow"
-                                        >
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-semibold">
-                                                        {patient.name.split(' ').map(n => n[0]).join('')}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium">{patient.name}</p>
-                                                        <p className="text-sm text-muted-foreground">{patient.assignedDoctor}</p>
-                                                    </div>
-                                                </div>
-                                                <span className={`px-2 py-1 rounded-full text-xs ${getStatusStyle(patient.status)}`}>
-                                                    {getStatusLabel(patient.status)}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground mb-3">{patient.symptoms}</p>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex gap-4 text-xs text-muted-foreground">
-                                                    <span>Appt: {patient.appointmentTime}</span>
-                                                    <span>•</span>
-                                                    <span>{patient.province}</span>
-                                                    {patient.needsAssistance && (
-                                                        <>
-                                                            <span>•</span>
-                                                            <span className="text-primary">♿ Assistance needed</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <Button>Complete</Button>
-                                            </div>
+                {loading ? (
+                    <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    </div>
+                ) : (
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        {/* Patient Queue */}
+                        <div className="lg:col-span-2">
+                            <Card className="glass-card animate-slide-up">
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <CardTitle>Patient Queue</CardTitle>
+                                            <CardDescription>{waitingPatients.length + inConsultation.length} patients active</CardDescription>
                                         </div>
-                                    ))}
-
-                                    {/* Waiting Patients */}
-                                    {waitingPatients.map((patient, index) => (
-                                        <div
-                                            key={patient.id}
-                                            className="p-4 rounded-xl border hover:border-primary/50 transition-all hover:shadow-md"
-                                        >
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-sm font-semibold">
-                                                        #{patient.queueNumber}
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <p className="font-medium">{patient.name}</p>
-                                                            {patient.priority !== "normal" && (
-                                                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getPriorityStyle(patient.priority)}`}>
-                                                                    {patient.priority.toUpperCase()}
-                                                                </span>
-                                                            )}
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-3">
+                                        {/* In Consultation */}
+                                        {inConsultation.map((patient) => (
+                                            <div
+                                                key={patient.id}
+                                                className="p-4 rounded-xl border-2 border-primary bg-primary/5 animate-pulse-glow"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white text-sm font-semibold">
+                                                            {patient.name.split(' ').map((n: string) => n[0]).join('')}
                                                         </div>
-                                                        <p className="text-sm text-muted-foreground">{patient.assignedDoctor}</p>
+                                                        <div>
+                                                            <p className="font-medium">{patient.name}</p>
+                                                            <p className="text-sm text-muted-foreground">Queue #{patient.queue_number}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusStyle(patient.status)}`}>
+                                                        {getStatusLabel(patient.status)}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground mb-3">{patient.symptoms}</p>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex gap-4 text-xs text-muted-foreground">
+                                                        <span>{patient.province}</span>
+                                                        {patient.needs_assistance && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="text-primary">♿ Assistance needed</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <Button onClick={() => handleStatusUpdate(patient.id, "Completed")}>Complete</Button>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Waiting Patients */}
+                                        {waitingPatients.map((patient) => (
+                                            <div
+                                                key={patient.id}
+                                                className="p-4 rounded-xl border hover:border-primary/50 transition-all hover:shadow-md"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-sm font-semibold">
+                                                            #{patient.queue_number}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium">{patient.name}</p>
+                                                            <p className="text-sm text-muted-foreground">ID: {patient.id_number}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusStyle(patient.status)}`}>
+                                                        {getStatusLabel(patient.status)}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground mb-3">{patient.symptoms}</p>
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex gap-4 text-xs text-muted-foreground">
+                                                        <span>{patient.province}</span>
+                                                        {patient.needs_assistance && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="text-primary">♿ Assistance</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            className="bg-primary/10 text-primary hover:bg-primary/20 border-none"
+                                                            onClick={() => handleStatusUpdate(patient.id, "In Consultation")}
+                                                        >
+                                                            Call Patient
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                                <span className={`px-2 py-1 rounded-full text-xs ${getStatusStyle(patient.status)}`}>
-                                                    {getStatusLabel(patient.status)}
-                                                </span>
                                             </div>
-                                            <p className="text-sm text-muted-foreground mb-3">{patient.symptoms}</p>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex gap-4 text-xs text-muted-foreground">
-                                                    <span>Appt: {patient.appointmentTime}</span>
-                                                    <span>•</span>
-                                                    <span>Checked in: {patient.checkInTime}</span>
-                                                    {patient.needsAssistance && (
-                                                        <>
-                                                            <span>•</span>
-                                                            <span className="text-primary">♿ Assistance</span>
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Button className="bg-transparent border border-input hover:bg-accent text-foreground">View</Button>
-                                                    <Button>Call</Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                        ))}
 
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Active Doctors */}
-                        <Card className="glass-card animate-slide-up" style={{ animationDelay: "0.1s" }}>
-                            <CardHeader>
-                                <CardTitle>Active Doctors</CardTitle>
-                                <CardDescription>{activeDoctors.length} doctors on duty</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {activeDoctors.slice(0, 4).map((doctor) => (
-                                        <div key={doctor.id} className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white text-xs font-semibold">
-                                                    {doctor.name.split(' ').slice(1).map(n => n[0]).join('')}
-                                                </div>
-                                                <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${doctor.status === "available" ? "bg-green-500" : "bg-amber-500"
-                                                    }`} />
+                                        {patients.length === 0 && (
+                                            <div className="text-center py-12 text-muted-foreground">
+                                                <p>No patients in queue</p>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">{doctor.name}</p>
-                                                <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm font-medium">{doctor.patientsToday}</p>
-                                                <p className="text-xs text-muted-foreground">today</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
 
-                        {/* Notifications */}
-                        <Card className="glass-card animate-slide-up" style={{ animationDelay: "0.2s" }}>
-                            <CardHeader>
-                                <CardTitle>Recent Activity</CardTitle>
-                                <CardDescription>{unreadNotifications.length} unread</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
-                                    {mockNotifications.slice(0, 4).map((notification) => (
-                                        <div
-                                            key={notification.id}
-                                            className={`p-3 rounded-lg ${notification.read ? "bg-accent/30" : "bg-accent"}`}
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <div className={`w-2 h-2 mt-2 rounded-full ${notification.type === "alert" ? "bg-red-500" :
-                                                    notification.type === "appointment" ? "bg-blue-500" :
-                                                        notification.type === "reminder" ? "bg-amber-500" :
-                                                            "bg-gray-500"
-                                                    }`} />
+                        {/* Sidebar */}
+                        <div className="space-y-6">
+                            {/* Active Doctors */}
+                            <Card className="glass-card animate-slide-up" style={{ animationDelay: "0.1s" }}>
+                                <CardHeader>
+                                    <CardTitle>Active Doctors</CardTitle>
+                                    <CardDescription>{activeDoctors.length} doctors on duty</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-3">
+                                        {activeDoctors.slice(0, 4).map((doctor) => (
+                                            <div key={doctor.id} className="flex items-center gap-3">
+                                                <div className="relative">
+                                                    <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-white text-xs font-semibold">
+                                                        {doctor.name.split(' ').slice(1).map(n => n[0]).join('')}
+                                                    </div>
+                                                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${doctor.status === "available" ? "bg-green-500" : "bg-amber-500"
+                                                        }`} />
+                                                </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-medium">{notification.title}</p>
-                                                    <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">
-                                                        {new Date(notification.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
+                                                    <p className="text-sm font-medium truncate">{doctor.name}</p>
+                                                    <p className="text-xs text-muted-foreground truncate">{doctor.specialty}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm font-medium">{doctor.patientsToday}</p>
+                                                    <p className="text-xs text-muted-foreground">today</p>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardContent>
-                        </Card>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     )
