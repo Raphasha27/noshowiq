@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -60,8 +60,21 @@ const navItems = [
     { href: "/settings", label: "Settings", Icon: WrenchIcon },
 ]
 
+const LogoutIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m-3-3l3-3m0 0l-3-3m3 3H9" />
+    </svg>
+)
+
 export function Sidebar() {
     const pathname = usePathname()
+    const router = useRouter()
+
+    const handleLogout = () => {
+        localStorage.removeItem("isLoggedIn")
+        localStorage.removeItem("userRole")
+        router.push("/login")
+    }
 
     return (
         <aside className="fixed left-0 top-0 z-40 h-screen w-64 glass-card border-r transition-transform -translate-x-full md:translate-x-0">
@@ -110,7 +123,16 @@ export function Sidebar() {
                         <span className="text-sm text-muted-foreground">Theme</span>
                         <ThemeToggle />
                     </div>
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/50">
+
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors text-sm font-medium"
+                    >
+                        <LogoutIcon />
+                        <span>Logout</span>
+                    </button>
+
+                    <Link href="/profile" className="flex items-center gap-3 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
                         <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-white text-xs font-semibold">
                             SN
                         </div>
@@ -118,7 +140,7 @@ export function Sidebar() {
                             <p className="text-sm font-medium truncate">Dr. S. Nkosi</p>
                             <p className="text-xs text-muted-foreground truncate">Gauteng Region</p>
                         </div>
-                    </div>
+                    </Link>
                 </div>
             </div>
         </aside>
