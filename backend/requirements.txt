@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+redis
+python-multipart
+websockets
+jinja2
+python-dotenv
