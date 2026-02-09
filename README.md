@@ -26,7 +26,13 @@ Experience the application live here:
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Lucide React
 - **Backend**: Python, FastAPI, SQLAlchemy
 - **Database**: PostgreSQL (Production), SQLite (Local)
-- **Deployment**: Vercel (Frontend/API)
+- **Deployment**: Vercel (Frontend/API), Docker Compose (Full-Stack Local)
+
+## 🛡️ Security & DevSecOps
+NoShowIQ implements a "Security-First" engineering culture:
+- **TruffleHog**: Automated secret scanning to prevent credential leakage.
+- **Snyk Analysis**: Continuous dependency auditing for high-risk vulnerabilities.
+- **PostgreSQL Health Checks**: Automated orchestration ensuring database readiness before service start.
 
 ## 🚀 Getting Started
 
