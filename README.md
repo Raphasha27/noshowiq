@@ -1,8 +1,10 @@
-# NoShowIQ 🏥
+# 🏥 KIROV DYNAMICS | NOSHOWIQ
 
-**Connecting Patients and Doctors for Predictable Healthcare**
+[![Kirov Dynamics](https://img.shields.io/badge/Kirov_Dynamics-AI_Product_Builder-002D62?style=for-the-badge&labelColor=0d1117)](https://github.com/Raphasha27)
+![Role](https://img.shields.io/badge/Role-AI_Product_Builder-blue?style=for-the-badge&labelColor=0d1117)
 
-NoShowIQ is a specialized Hospital Management and Patient Queue system designed for the South African healthcare landscape. It addresses common inefficiencies in waiting rooms through real-time queue tracking, symptom pre-reporting, and professional dashboard management.
+**NoShowIQ** is a predictive healthcare analytics engine designed to minimize patient no-shows and optimize clinic efficiency. Developed by **Kirov Dynamics Technology**, it demonstrates elite **AI Product Building** by turning complex data into actionable medical intelligence.
+
 
 ---
 
