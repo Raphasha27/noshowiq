@@ -8,6 +8,7 @@ on:
 
 jobs:
   frontend:
+    name: Frontend (Next.js)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,6 +33,7 @@ jobs:
         NEXT_TELEMETRY_DISABLED: 1
 
   backend:
+    name: Backend (Python)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,3 +55,18 @@ jobs:
 
     - name: Syntax check
       run: python -m py_compile $(find . -name "*.py" | head -20) || true
+
+  security_scan:
+    name: Security Scan (Trivy)
+    needs: [frontend, backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
